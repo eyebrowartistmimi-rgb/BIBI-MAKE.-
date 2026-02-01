@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
@@ -19,10 +19,10 @@ type Assistant = {
 }
 
 export default function ChatRoom() {
+  const params = useParams()
   const searchParams = useSearchParams()
-  const visitorId = searchParams.get('visitor') || 'anonymous'
-  const locationId = searchParams.get('location')
-  const assistantId = searchParams.get('assistant')
+  const visitorId = searchParams.get('visitor') || 'visitor_' + Date.now()
+  const assistantId = params.id as string
   
   const [assistant, setAssistant] = useState<Assistant | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -33,9 +33,11 @@ export default function ChatRoom() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!assistantId) return
+      if (!assistantId) {
+        setLoading(false)
+        return
+      }
 
-      // アシスタント情報を取得
       const { data: assistantData } = await supabase
         .from('assistants')
         .select('*')
@@ -46,11 +48,9 @@ export default function ChatRoom() {
         setAssistant(assistantData)
       }
 
-      // 既存のチャットルームを探すか、新規作成
       let roomId = chatRoomId
 
       if (!roomId) {
-        // 既存のチャットルームを探す
         const { data: existingRoom } = await supabase
           .from('chat_rooms')
           .select('id')
@@ -61,7 +61,6 @@ export default function ChatRoom() {
         if (existingRoom) {
           roomId = existingRoom.id
         } else {
-          // 新規チャットルーム作成
           const { data: newRoom } = await supabase
             .from('chat_rooms')
             .insert({
@@ -81,7 +80,6 @@ export default function ChatRoom() {
         }
       }
 
-      // メッセージを取得
       if (roomId) {
         const { data: messagesData } = await supabase
           .from('messages')
@@ -107,7 +105,6 @@ export default function ChatRoom() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !chatRoomId) return
 
-    // Supabaseにメッセージを保存
     const { data, error } = await supabase
       .from('messages')
       .insert({
@@ -141,7 +138,6 @@ export default function ChatRoom() {
 
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col">
-      {/* ヘッダー */}
       <div className="bg-pink-500 text-white p-4 shadow-md">
         <div className="max-w-2xl mx-auto flex items-center">
           <Link href="/" className="mr-4">
@@ -161,10 +157,8 @@ export default function ChatRoom() {
         </div>
       </div>
 
-      {/* チャットエリア */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-2xl mx-auto space-y-4">
-          {/* ウェルカムメッセージ */}
           <div className="flex justify-start">
             <div className="bg-white rounded-2xl rounded-tl-none p-4 max-w-xs shadow">
               <p className="text-gray-800">
@@ -179,7 +173,6 @@ export default function ChatRoom() {
             </div>
           </div>
 
-          {/* メッセージ一覧 */}
           {messages.map((message) => (
             <div
               key={message.id}
@@ -208,7 +201,6 @@ export default function ChatRoom() {
         </div>
       </div>
 
-      {/* メッセージ入力エリア */}
       <div className="bg-white border-t p-4">
         <div className="max-w-2xl mx-auto flex gap-2">
           <input
