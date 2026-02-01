@@ -331,7 +331,7 @@ export default function CalendarPage() {
                     className="sr-only"
                   />
                   <span
-                    className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-offset-2 transition-all"
+                className="w-4 h-4 rounded-full flex-shrink-0 transition-all"
                   style={{
   backgroundColor: isSelected ? color.bg : 'transparent',
   boxShadow: `0 0 0 2px white, 0 0 0 4px ${color.bg}`,
