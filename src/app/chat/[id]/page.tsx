@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
@@ -19,17 +19,22 @@ type Assistant = {
 }
 
 export default function ChatRoom() {
-  const params = useParams()
-  const assistantId = params.id as string
+  const searchParams = useSearchParams()
+  const visitorId = searchParams.get('visitor') || 'anonymous'
+  const locationId = searchParams.get('location')
+  const assistantId = searchParams.get('assistant')
   
   const [assistant, setAssistant] = useState<Assistant | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [chatRoomId, setChatRoomId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     async function fetchData() {
+      if (!assistantId) return
+
       // アシスタント情報を取得
       const { data: assistantData } = await supabase
         .from('assistants')
@@ -41,28 +46,88 @@ export default function ChatRoom() {
         setAssistant(assistantData)
       }
 
+      // 既存のチャットルームを探すか、新規作成
+      let roomId = chatRoomId
+
+      if (!roomId) {
+        // 既存のチャットルームを探す
+        const { data: existingRoom } = await supabase
+          .from('chat_rooms')
+          .select('id')
+          .eq('assistant_id', assistantId)
+          .eq('name', visitorId)
+          .single()
+
+        if (existingRoom) {
+          roomId = existingRoom.id
+        } else {
+          // 新規チャットルーム作成
+          const { data: newRoom } = await supabase
+            .from('chat_rooms')
+            .insert({
+              assistant_id: assistantId,
+              name: visitorId
+            })
+            .select()
+            .single()
+
+          if (newRoom) {
+            roomId = newRoom.id
+          }
+        }
+
+        if (roomId) {
+          setChatRoomId(roomId)
+        }
+      }
+
+      // メッセージを取得
+      if (roomId) {
+        const { data: messagesData } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('chat_room_id', roomId)
+          .order('created_at', { ascending: true })
+
+        if (messagesData) {
+          setMessages(messagesData)
+        }
+      }
+
       setLoading(false)
     }
 
     fetchData()
-  }, [assistantId])
+  }, [assistantId, visitorId, chatRoomId])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() || !chatRoomId) return
 
-    // メッセージをローカルに追加（デモ用）
-    const tempMessage: Message = {
-      id: Date.now().toString(),
-      content: newMessage,
-      sender_type: 'student',
-      created_at: new Date().toISOString()
+    // Supabaseにメッセージを保存
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        chat_room_id: chatRoomId,
+        content: newMessage,
+        sender_type: 'student',
+        sender_id: visitorId
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('メッセージ送信エラー:', error)
+      return
+    }
+
+    if (data) {
+      setMessages([...messages, data])
     }
     
-    setMessages([...messages, tempMessage])
     setNewMessage('')
   }
 
