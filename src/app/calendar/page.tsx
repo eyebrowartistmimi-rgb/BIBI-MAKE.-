@@ -332,10 +332,10 @@ export default function CalendarPage() {
                   />
                   <span
                     className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-offset-2 transition-all"
-                    style={{
-                      backgroundColor: isSelected ? color.bg : 'transparent',
-                      ringColor: color.bg,
-                    }}
+                  style={{
+  backgroundColor: isSelected ? color.bg : 'transparent',
+  boxShadow: `0 0 0 2px white, 0 0 0 4px ${color.bg}`,
+}}
                   />
                   <span className={`text-sm ${isSelected ? 'text-slate-800' : 'text-slate-400'}`}>
                     {assistant.name}
