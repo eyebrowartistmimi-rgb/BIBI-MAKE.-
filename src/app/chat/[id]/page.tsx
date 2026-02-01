@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
@@ -20,8 +20,7 @@ type Assistant = {
 
 export default function ChatRoom() {
   const params = useParams()
-  const searchParams = useSearchParams()
-  const visitorId = searchParams.get('visitor') || 'visitor_' + Date.now()
+  const visitorId = 'visitor_' + Math.random().toString(36).substr(2, 9)
   const assistantId = params.id as string
   
   const [assistant, setAssistant] = useState<Assistant | null>(null)
@@ -30,8 +29,12 @@ export default function ChatRoom() {
   const [loading, setLoading] = useState(true)
   const [chatRoomId, setChatRoomId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const initialized = useRef(false)
 
   useEffect(() => {
+    if (initialized.current) return
+    initialized.current = true
+
     async function fetchData() {
       if (!assistantId) {
         setLoading(false)
@@ -48,55 +51,31 @@ export default function ChatRoom() {
         setAssistant(assistantData)
       }
 
-      let roomId = chatRoomId
+      // チャットルーム作成
+      const { data: newRoom, error: roomError } = await supabase
+        .from('chat_rooms')
+        .insert({
+          assistant_id: assistantId,
+          name: visitorId
+        })
+        .select()
+        .single()
 
-      if (!roomId) {
-        const { data: existingRoom } = await supabase
-          .from('chat_rooms')
-          .select('id')
-          .eq('assistant_id', assistantId)
-          .eq('name', visitorId)
-          .single()
-
-        if (existingRoom) {
-          roomId = existingRoom.id
-        } else {
-          const { data: newRoom } = await supabase
-            .from('chat_rooms')
-            .insert({
-              assistant_id: assistantId,
-              name: visitorId
-            })
-            .select()
-            .single()
-
-          if (newRoom) {
-            roomId = newRoom.id
-          }
-        }
-
-        if (roomId) {
-          setChatRoomId(roomId)
-        }
+      if (roomError) {
+        console.error('チャットルーム作成エラー:', roomError)
+        setLoading(false)
+        return
       }
 
-      if (roomId) {
-        const { data: messagesData } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('chat_room_id', roomId)
-          .order('created_at', { ascending: true })
-
-        if (messagesData) {
-          setMessages(messagesData)
-        }
+      if (newRoom) {
+        setChatRoomId(newRoom.id)
       }
 
       setLoading(false)
     }
 
     fetchData()
-  }, [assistantId, visitorId, chatRoomId])
+  }, [assistantId])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
