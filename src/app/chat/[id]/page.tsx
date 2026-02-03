@@ -76,6 +76,35 @@ export default function ChatRoom() {
     fetchData()
   }, [assistantId])
 
+  // リアルタイムでメッセージを受信
+  useEffect(() => {
+    if (!chatRoomId) return
+
+    const channel = supabase
+      .channel('messages-' + chatRoomId)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_room_id=eq.${chatRoomId}`
+        },
+        (payload) => {
+          const newMsg = payload.new as Message
+          setMessages(prev => {
+            if (prev.some(m => m.id === newMsg.id)) return prev
+            return [...prev, newMsg]
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [chatRoomId])
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -86,23 +115,17 @@ export default function ChatRoom() {
     const messageText = newMessage
     setNewMessage('')
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('messages')
       .insert({
         chat_room_id: chatRoomId,
         content: messageText,
         sender_type: 'student'
       })
-      .select()
-      .single()
 
     if (error) {
       console.error('error:', error)
       return
-    }
-
-    if (data) {
-      setMessages(prev => [...prev, data])
     }
 
     try {
@@ -166,58 +189,4 @@ export default function ChatRoom() {
               <p className="text-gray-800 mt-2">
                 立ち合いのご予約やご質問はこちらでお気軽にどうぞ！
               </p>
-              <div className="text-xs text-gray-400 mt-2">
-                {assistant?.name}
-              </div>
-            </div>
-          </div>
-
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender_type === 'student' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`rounded-2xl p-4 max-w-xs shadow ${
-                  message.sender_type === 'student'
-                    ? 'bg-pink-500 text-white rounded-tr-none'
-                    : 'bg-white text-gray-800 rounded-tl-none'
-                }`}
-              >
-                <p>{message.content}</p>
-                <div className={`text-xs mt-2 ${
-                  message.sender_type === 'student' ? 'text-pink-100' : 'text-gray-400'
-                }`}>
-                  {new Date(message.created_at).toLocaleTimeString('ja-JP', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </div>
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      <div className="bg-white border-t p-4">
-        <div className="max-w-2xl mx-auto flex gap-2">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="メッセージを入力..."
-            className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:border-pink-400"
-          />
-          <button
-            onClick={handleSendMessage}
-            className="bg-pink-500 text-white px-6 py-2 rounded-full hover:bg-pink-600 transition-colors"
-          >
-            送信
-          </button>
-        </div>
-      </div>
-    </main>
-  )
-}
+              <div className="text-xs text-gray-40
