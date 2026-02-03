@@ -1,27 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
-    console.log('LINE Webhook received:', JSON.stringify(body, null, 2))
-    
-    // イベントを処理
+
     for (const event of body.events || []) {
-      console.log('User ID:', event.source?.userId)
-      console.log('Event type:', event.type)
-      
-      // フォローイベント（友だち追加）の場合
-      if (event.type === 'follow') {
-        console.log('New follower User ID:', event.source?.userId)
-      }
-      
-      // メッセージイベントの場合
-      if (event.type === 'message') {
-        console.log('Message from User ID:', event.source?.userId)
+      if (event.type === 'message' && event.message?.type === 'text') {
+        const lineUserId = event.source?.userId
+        const messageText = event.message.text
+
+        if (!lineUserId) continue
+
+        const { data: assistant } = await supabase
+          .from('assistants')
+          .select('id')
+          .eq('line_user_id', lineUserId)
+          .single()
+
+        if (!assistant) continue
+
+        const { data: chatRoom } = await supabase
+          .from('chat_rooms')
+          .select('id')
+          .eq('assistant_id', assistant.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (!chatRoom) continue
+
+        await supabase
+          .from('messages')
+          .insert({
+            chat_room_id: chatRoom.id,
+            content: messageText,
+            sender_type: 'assistant'
+          })
       }
     }
-    
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Webhook Error:', error)
