@@ -61,7 +61,7 @@ export default function ChatRoom() {
         .single()
 
       if (roomError) {
-        console.error('チャットルーム作成エラー:', roomError)
+        console.error('error:', roomError)
         setLoading(false)
         return
       }
@@ -91,19 +91,18 @@ export default function ChatRoom() {
       .insert({
         chat_room_id: chatRoomId,
         content: messageText,
-        sender_type: 'student',
-        sender_id: visitorId
+        sender_type: 'student'
       })
       .select()
       .single()
 
     if (error) {
-      console.error('メッセージ送信エラー:', error)
+      console.error('error:', error)
       return
     }
 
     if (data) {
-      setMessages([...messages, data])
+      setMessages(prev => [...prev, data])
     }
 
     try {
@@ -124,7 +123,7 @@ export default function ChatRoom() {
         })
       }
     } catch (err) {
-      console.error('LINE通知エラー:', err)
+      console.error('LINE error:', err)
     }
   }
 
