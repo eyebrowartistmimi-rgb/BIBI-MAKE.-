@@ -22,7 +22,7 @@ export default function ChatRoom() {
   const params = useParams()
   const visitorId = 'visitor_' + Math.random().toString(36).substr(2, 9)
   const assistantId = params.id as string
-  
+
   const [assistant, setAssistant] = useState<Assistant | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -46,7 +46,7 @@ export default function ChatRoom() {
         .select('*')
         .eq('id', assistantId)
         .single()
-      
+
       if (assistantData) {
         setAssistant(assistantData)
       }
@@ -144,6 +144,18 @@ export default function ChatRoom() {
           })
         })
       }
+
+      // ★ LINEグループへの通知
+      await fetch('/api/line-group-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assistantName: assistantData?.name || 'アシスタント',
+          message: messageText,
+          chatRoomId: chatRoomId
+        })
+      })
+
     } catch (err) {
       console.error('LINE error:', err)
     }
