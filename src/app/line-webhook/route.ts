@@ -10,6 +10,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     for (const event of body.events || []) {
+      if (event.type === 'join' && event.source?.type === 'group') {
+        console.log('=== LINE GROUP ID ===')
+        console.log('Group ID:', event.source.groupId)
+        console.log('====================')
+        continue
+      }
+
+      if (event.source?.type === 'group') {
+        console.log('Message from group:', event.source.groupId)
+      }
+
       if (event.type === 'message' && event.message?.type === 'text') {
         const lineUserId = event.source?.userId
         const messageText = event.message.text
