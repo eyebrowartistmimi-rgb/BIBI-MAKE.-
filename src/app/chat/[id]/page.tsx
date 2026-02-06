@@ -75,7 +75,7 @@ export default function ChatRoom() {
               返信もLINEに届くので安心です✨
             </p>
 
-            
+            <a 
               href={lineUrl}
               className="block w-full bg-[#06C755] text-white font-bold py-4 px-6 rounded-full text-lg hover:bg-[#05b34c] transition-colors shadow-lg"
             >
