@@ -38,7 +38,9 @@ export default function ChatRoom() {
     )
   }
 
-  const lineUrl = `https://line.me/R/oaMessage/@053vjqgl/?${encodeURIComponent(assistant?.name + 'さん希望です')}`
+  const assistantName = assistant?.name || 'アシスタント'
+  const lineMessage = encodeURIComponent(assistantName + 'さん希望です')
+  const lineUrl = 'https://line.me/R/oaMessage/@053vjqgl/?' + lineMessage
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 to-white flex flex-col">
@@ -52,7 +54,7 @@ export default function ChatRoom() {
               <span className="text-xl">👩</span>
             </div>
             <div>
-              <div className="font-bold">{assistant?.name}</div>
+              <div className="font-bold">{assistantName}</div>
               <div className="text-xs text-pink-100">
                 {assistant?.notes || '立ち合いサポート'}
               </div>
@@ -66,7 +68,7 @@ export default function ChatRoom() {
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <div className="text-6xl mb-4">💬</div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">
-              {assistant?.name}にLINEで相談
+              {assistantName}にLINEで相談
             </h2>
             <p className="text-gray-600 mb-6">
               下のボタンからLINEでメッセージを送れます。
@@ -81,8 +83,7 @@ export default function ChatRoom() {
             </a>
 
             <p className="text-xs text-gray-400 mt-4">
-              LINE公式アカウントが開きます。<br />
-              友だち追加がまだの方は追加してからメッセージを送ってください。
+              LINE公式アカウントが開きます。友だち追加がまだの方は追加してからメッセージを送ってください。
             </p>
           </div>
         </div>
